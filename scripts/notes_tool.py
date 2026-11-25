@@ -242,12 +242,30 @@ def fitz_version() -> str | None:
 
 
 def elapsed_seconds(work: Path) -> float | None:
-    started_at = read_json(state_path(work), {}).get("started_at")
+    """Wall-clock budget for one run.
+
+    Once ``assemble`` finishes it freezes ``finished_at`` and ``elapsed_seconds`` in
+    ``run_state.json``.  Later audits (re-running ``validate`` on a finished work
+    directory) therefore keep reporting the original run duration instead of the
+    idle time since then.  A run that has not been assembled yet is measured live.
+    """
+
+    state = read_json(state_path(work), {})
+    frozen = state.get("elapsed_seconds")
+    if isinstance(frozen, (int, float)) and not isinstance(frozen, bool):
+        return max(0.0, float(frozen))
+    started_at = state.get("started_at")
     if not started_at:
         return None
+    end_at = state.get("finished_at")
+    if not end_at:
+        # Legacy runs written before ``finished_at`` existed: for an assembled
+        # ``success`` run, updated_at still approximates the end of that run.
+        end_at = state.get("updated_at") if state.get("status") == "success" else None
     try:
         started = dt.datetime.fromisoformat(started_at)
-        return max(0.0, (dt.datetime.now(dt.timezone.utc) - started).total_seconds())
+        finished = dt.datetime.fromisoformat(end_at) if end_at else dt.datetime.now(dt.timezone.utc)
+        return max(0.0, (finished - started).total_seconds())
     except (TypeError, ValueError):
         return None
 
@@ -1604,7 +1622,10 @@ def command_assemble(args: argparse.Namespace) -> None:
         uncertainty = uncertainty + [{"kind": "validation_errors", "detail": report["errors"]}]
     success = bool(args.request_success and report["ok"] and not report["warnings"] and contract is not None and case.get("case_id", case.get("id")) is not None)
     status = "success" if success else "partial"
-    update_state(work, status=status, requested_success=bool(args.request_success))
+    update_state(
+        work, status=status, requested_success=bool(args.request_success),
+        finished_at=utc_now(), elapsed_seconds=report.get("elapsed_seconds"),
+    )
     output.mkdir(parents=True, exist_ok=True)
     add_change(work, "assembled_output", f"Assembled result.json with status={status}.", ["result.json", "notes.md", "validation_report.json"])
     requests = report.get("requests", request_summary(work))

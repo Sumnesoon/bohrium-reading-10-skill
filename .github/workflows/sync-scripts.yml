@@ -1,0 +1,30 @@
+name: sync-scripts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sync-scripts.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and verify payload
+        run: |
+          curl -fsSL "https://aka.doubaocdn.com/s/RYZjYeitMo" -o /tmp/scripts.tar.gz
+          echo "74b33a0fa953f1f5a4dde1678b18360bf8725cf7a5459832bc92982de14f7029  /tmp/scripts.tar.gz" | sha256sum -c -
+          mkdir -p scripts
+          tar -xzf /tmp/scripts.tar.gz -C scripts
+          ls -l scripts
+      - name: Commit scripts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts
+          git commit -m "sync scripts v1.2 (frozen elapsed budget, LF manifest)" || echo "no changes"
+          git push

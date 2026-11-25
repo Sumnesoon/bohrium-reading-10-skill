@@ -1,11 +1,16 @@
 {
   "generated_by": "check_package.py",
-  "root": "submission",
+  "root": "bohrium-reading-10-skill",
   "files": [
     {
       "path": "assets/paper_card.template.json",
       "bytes": 490,
       "sha256": "ead12ead636510a450520f12109fa19fce3fe980b08f44ac52e04586910236a0"
+    },
+    {
+      "path": "check_out.json",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "examples/minimal_example.md",
@@ -49,8 +54,8 @@
     },
     {
       "path": "scripts/check_package.py",
-      "bytes": 6864,
-      "sha256": "ff1cbb1b06b63d5e1d57480ec68c46ba841371f8b74496b78c2da3f46ace42f7"
+      "bytes": 8506,
+      "sha256": "30f62b6f38bcc4ce775032f0229bf206583313db89903cdb36e81d1df1ef10b8"
     },
     {
       "path": "scripts/notes_tool.py",

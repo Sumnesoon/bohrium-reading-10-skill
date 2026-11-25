@@ -13,7 +13,53 @@ from pathlib import Path
 MAX_FILES = 50
 MAX_SINGLE = 500 * 1024
 MAX_TOTAL = 2 * 1024 * 1024
+EXCLUDED_DIRS = {".git", ".github"}
+EXCLUDED_FILES = {"manifest.json", "submission.sha256"}
+EXCLUDED_DIRS = {".git", ".github"}
+EXCLUDED_FILES = {"manifest.json", "submission.sha256"}
 SECRET_PATTERNS = [re.compile(r"PLAYGROUND_TOKEN\s*="), re.compile(r"asp_[A-Za-z0-9]{20,}")]
+
+
+def iter_package_files(root: Path) -> list[Path]:
+    """Enumerate package files, ignoring VCS metadata and generated reports.
+
+    Reviewers typically clone the public repository and run this script in place;
+    without this filter `.git` objects would be counted as package resources and
+    rejected as non-UTF-8.
+    """
+
+    files: list[Path] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative_parts = path.relative_to(root).parts
+        if any(part in EXCLUDED_DIRS for part in relative_parts):
+            continue
+        if path.name in EXCLUDED_FILES:
+            continue
+        files.append(path)
+    return files
+
+
+def iter_package_files(root: Path) -> list[Path]:
+    """Enumerate package files, ignoring VCS metadata and generated reports.
+
+    Reviewers typically clone the public repository and run this script in place;
+    without this filter `.git` objects would be counted as package resources and
+    rejected as non-UTF-8.
+    """
+
+    files: list[Path] = []
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        relative_parts = path.relative_to(root).parts
+        if any(part in EXCLUDED_DIRS for part in relative_parts):
+            continue
+        if path.name in EXCLUDED_FILES:
+            continue
+        files.append(path)
+    return files
 
 
 def sha256_of(path: Path) -> str:
@@ -56,10 +102,14 @@ def main() -> None:
         print(json.dumps({"ok": False, "errors": [f"not a directory: {root}"]}))
         raise SystemExit(2)
     all_paths = list(root.rglob("*"))
-    symlinks = [str(path.relative_to(root)) for path in all_paths if path.is_symlink()]
+    symlinks = [
+        str(path.relative_to(root))
+        for path in all_paths
+        if path.is_symlink() and not any(part in EXCLUDED_DIRS for part in path.relative_to(root).parts)
+    ]
     if symlinks:
         errors.append(f"symlinks are not allowed: {symlinks}")
-    files = [path for path in all_paths if path.is_file()]
+    files = iter_package_files(root)
     if len(files) > MAX_FILES:
         errors.append(f"too many files: {len(files)} > {MAX_FILES}")
     total = 0

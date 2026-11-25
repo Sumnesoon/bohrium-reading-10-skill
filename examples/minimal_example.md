@@ -51,6 +51,8 @@ Agent 在读取真实材料后，才可写类似结构；下面的文字仅用�
   "evidence": [],
   "case_id": "demo-001",
   "status": "partial",
+  "run_status": "unable",
+  "status_reason": "示例：尚未读取实际论文，无法生成有证据的笔记。",
   "uncertainty": [
     "示例：尚未完成真实论文处理，因此状态保持 partial。"
   ]

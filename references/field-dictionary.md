@@ -61,9 +61,10 @@
 内容状态与运行状态不得混用：
 
 - 内容状态：`reported`、`not_reported`、`uncertain`、`conflict`；
-- 运行状态：`success`、`partial`，必要时按案例契约写无法判断或拒答原因。
+- 平台契约 `status`：`success`、`partial`（保持赛事/平台既有枚举）；
+- 本次运行 `run_status`：`success`、`partial`、`unable`、`refused`，并附 `status_reason`。
 
-只有实际完成全部契约且机器检查通过时才可请求 `success`。`success` 不表示语义内容经过平台或人工背书。
+`run_status=unable` 表示材料不可读、没有可用文本或没有生成笔记，不能判断；`refused` 表示任务越界或拒绝伪造，必须写明边界与人工接管位置；两者都不等于 `success`。只有实际完成全部契约且机器检查通过时才可请求 `success`，`success` 不表示语义内容经过平台或人工背书。
 
 ## 术语与缩写条目
 

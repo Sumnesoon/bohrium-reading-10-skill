@@ -1,6 +1,6 @@
 # 章节对齐的证据型科研笔记（section-evidence-notes）
 
-版本 1.2.0｜MIT License｜Python 3.10+（PyMuPDF 可选，OCR 可选）
+版本 1.3.0｜MIT License｜Python 3.10+（PyMuPDF 可选；包内自带纯 Python PyPDF2 读取器；OCR 可选）
 
 本仓库是“文献总结与结构化笔记”赛题的参赛作品：一个把真实论文转成**按原文章节组织、可回链原文、可继续复用**的结构化笔记的 Skill。它不输出预先写好的摘要模板，也不是任何论文的预置答案。
 
@@ -14,8 +14,9 @@
 - `references/validation-and-evaluation.md`：验证分层、对照设计与可机器判定的边界。
 - `examples/minimal_example.md`：最小调用示例（仅为接口示意）。
 - `assets/paper_card.template.json`：论文卡片空白结构。
-- `scripts/notes_tool.py`：主脚本（`init / extract / sections / render / ocr / validate / review / request / assemble / status / compare`）。
+- `scripts/notes_tool.py`：主脚本（`init / extract / ingest / sections / render / ocr / validate / review / request / assemble / status / compare`）。
 - `scripts/parser_adapter.py`：Host 解析器 JSONL 适配（含附录字母标题的连续链检测）。
+- `vendor/PyPDF2/`：随包携带的 PyPDF2 3.0.1 reader-only 裁剪版（BSD-3-Clause），用于官方镜像没有 PyMuPDF/Poppler 时的纯 Python 文本兜底。
 - `scripts/check_package.py`：资源包自查与 `manifest.json`（逐文件 SHA-256）。
 - `scripts/self_test.py`：功能自测（合成测试夹具）。
 
@@ -29,13 +30,17 @@ PYTHON="${PYTHON:-python3}"
 
 "$PYTHON" scripts/notes_tool.py extract --pdf /input/paper.pdf --work /app/work --backend auto
 
+# 平台提供 pdf-text-tool / ocr-tool 的真实输出时，归一化为 {page, kind, text} JSONL 后：
+# "$PYTHON" scripts/notes_tool.py ingest --pdf /input/paper.pdf \
+#   --records /app/work/platform_text.jsonl --source platform_pdf_text_tool --work /app/work
+
 # Agent 阅读实际页面文本后写入 notes.jsonl、paper_card.json、uncertainty.json、contract_values.json
 
 "$PYTHON" scripts/notes_tool.py validate --case /input/case.json --work /app/work
 "$PYTHON" scripts/notes_tool.py assemble --case /input/case.json --work /app/work --output /app/output --lang zh
 ```
 
-`extract` 的后端顺序为 `.parser/<pdf-stem>.jsonl` → PyMuPDF → `pdftotext`；章节修正用 `sections list|split|merge|rename`，不要手改 JSON，所有变更写 `changes.jsonl`。
+`extract` 的后端顺序为 `.parser/<pdf-stem>.jsonl` → PyMuPDF → 包内 `vendor/PyPDF2`（纯 Python，无需安装）→ `pdftotext -raw`；章节修正用 `sections list|split|merge|rename`，不要手改 JSON，所有变更写 `changes.jsonl`。`ingest` 接受平台 `pdf-text-tool`/`ocr-tool` 已产出的真实文本（`{page, kind, text}` JSONL），不假设平台 CLI 的名称。
 
 ## 自检
 
@@ -45,7 +50,7 @@ python scripts/parser_adapter.py --self-test
 python scripts/self_test.py --work-root /tmp/self-test
 ```
 
-当前版本：`self_test.py` 29 项、`parser_adapter.py` 20 项检查全部通过；资源包 16 个资源文件（另有 `manifest.json`，实际提交共 17 个文本文件），单文件与总量均在赛题限制内（实际字节数见 `manifest.json`）。
+当前版本：`self_test.py` 33 项、`parser_adapter.py` 20 项检查全部通过；资源包 46 个资源文件（另有 `manifest.json`，实际提交共 47 个文本文件），单文件与总量均在赛题限制内（实际字节数见 `manifest.json`）。`vendor/PyPDF2` 为 30 个文件，加入后仍低于 50 文件 / 500KB 单文件 / 2MB 总量上限。
 
 ## 设计要点
 
@@ -56,15 +61,16 @@ python scripts/self_test.py --work-root /tmp/self-test
 
 ## OCR 与依赖：评审侧无需配置
 
-- 有文本层的 PDF 走文本层或平台 Host 解析器，不碰 OCR。
-- 扫描件优先用 Host 文本；没有时用 `render` 生成真实 PNG，再用 `rendered_page` 锚点加 `visual_review`。
-- `ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`；两者都没有时退出码 2，并记录 `fallback: render+visual_review`。**不需要安装任何 OCR 组件。**
+- 有文本层的 PDF 走 Host `.parser`。没有 Host 时依次尝试 PyMuPDF、包内 PyPDF2、`pdftotext`；三者都不需要评审逐一手动安装。
+- 平台声明并实际提供 `pdf-text-tool` / `ocr-tool` 时，优先调用平台工具，把真实输出归一化为 `{page, kind, text}` JSONL，再交给 `ingest` 建章节树；包内不虚构平台 CLI 的调用参数。
+- 扫描件没有平台文本时，用 `render` 生成真实 PNG，再用 `rendered_page` 锚点加 `visual_review`。
+- 本地 `ocr` 仅作可选兜底：自动选用已存在的 `tesseract` 或 `rapidocr`；两者都没有时退出码 2，并记录 `fallback: render+visual_review`。**不需要安装任何 OCR 组件或模型。**
 
 ## 证据边界
 
 - 机器校验只证明结构与文本匹配，不证明引句支持论断；语义复核仍需人工或模型完成。
 - 本仓库不包含、也不声称包含平台正式三案例的答案或官方评分。
-- 跨论文对照尚未补齐，现有 benchmark 只覆盖 ColBERT 单案例。
+- 包内 `vendor/PyPDF2` 是纯 Python 文本读取兜底，不能替代 PyMuPDF 的布局/坐标能力；其章节切分必须语义复核。
 
 ## 许可
 

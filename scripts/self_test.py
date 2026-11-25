@@ -181,6 +181,36 @@ def main() -> None:
         check("Request summary reports the ledger source", nt.request_summary(work)["request_source"] == "ledger")
         (work / "request_ledger.jsonl").unlink()
 
+        ingest_work = Path(temporary) / "ingest-work"
+        ingest_work.mkdir()
+        ingest_pdf = Path(temporary) / "ingest.pdf"
+        ingest_pdf.touch()
+        ingest_records = Path(temporary) / "platform-records.jsonl"
+        nt.write_text_atomic(ingest_records, "".join(json.dumps(row) + "\n" for row in [
+            {"page": 1, "kind": "heading", "text": "1 INTRODUCTION"},
+            {"page": 1, "kind": "paragraph", "text": "Platform text supplied by a real tool."},
+            {"page": 2, "kind": "heading", "text": "2 METHODS"},
+            {"page": 2, "kind": "paragraph", "text": "A documented method."},
+        ]))
+        nt.command_ingest(argparse.Namespace(
+            pdf=str(ingest_pdf), records=str(ingest_records), source="synthetic_platform_tool", work=str(ingest_work),
+        ))
+        ingest_sections = nt.read_json(ingest_work / "sections.json", {"sections": []})["sections"]
+        check("Ingest builds sections from platform records", len(ingest_sections) == 3)
+        check("Ingest reports its real source", nt.read_json(ingest_work / "extract_report.json").get("source") == "synthetic_platform_tool")
+
+        case_path = work / "case.json"
+        nt.write_json_atomic(case_path, case)
+        nt.write_json_atomic(nt.state_path(work), {"started_at": nt.utc_now(), "status": "partial"})
+        assembled_output = Path(temporary) / "assembled"
+        nt.command_assemble(argparse.Namespace(
+            case=str(case_path), work=str(work), output=str(assembled_output), lang="zh",
+            request_success=True, run_status="auto", status_reason="",
+        ))
+        assembled = nt.read_json(assembled_output / "result.json", {})
+        check("Assemble writes four-state run_status", assembled.get("run_status") == "success")
+        check("Assemble keeps platform status compatible", assembled.get("status") == "success")
+
         nt.write_json_atomic(nt.state_path(work), {"started_at": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(seconds=901)).isoformat(), "status": "partial"})
         expired = nt.validate_work(work, case)
         check("Budget overrun forces failure", any("budget exceeded" in error for error in expired["errors"]))

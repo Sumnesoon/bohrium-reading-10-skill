@@ -9,8 +9,8 @@
     },
     {
       "path": "examples/minimal_example.md",
-      "bytes": 1703,
-      "sha256": "22dce9a1a2d6690557071a7e032ad191f68936262eb5f7b0eec0bacd158e60f5"
+      "bytes": 1821,
+      "sha256": "1f3d81fc008470f70ac4858427c9e6e9d274d403bbc433cd98e6ce8d2b3a275d"
     },
     {
       "path": "GITHUB_URL.txt",
@@ -24,8 +24,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4390,
-      "sha256": "56eead2b4fda83e92bea84b357fd82d1be92a1faf5fad66d2a5a4440ffb84160"
+      "bytes": 5579,
+      "sha256": "6780acb31fe1e388e1bb1f0dc7fa1cd71122d67f2487f1cf489f392d7a7f20b6"
     },
     {
       "path": "references/anchor-format.md",
@@ -34,8 +34,8 @@
     },
     {
       "path": "references/field-dictionary.md",
-      "bytes": 4667,
-      "sha256": "36ec9913083f52f40800e1c4d4aefa05e11cc131d4e0bf0d2053bb39b769cafb"
+      "bytes": 4979,
+      "sha256": "ea0b7ef1523ec7ee3a2c386cb9eee29149d3bd3ee1b971c35ad4651e5b59b9da"
     },
     {
       "path": "references/validation-and-evaluation.md",
@@ -44,8 +44,8 @@
     },
     {
       "path": "REVIEWER_GUIDE.md",
-      "bytes": 3504,
-      "sha256": "d3e1bf35e590f0c30d911478f4650028eee4bbe80b772a48373432538b49d81b"
+      "bytes": 4168,
+      "sha256": "4e383f17981428fb00df8d3929c640fd1d860d0267ebd56a61c9479aa36afd84"
     },
     {
       "path": "scripts/check_package.py",
@@ -54,8 +54,8 @@
     },
     {
       "path": "scripts/notes_tool.py",
-      "bytes": 117603,
-      "sha256": "54eaf0a5f9ec32de9f5e8df568e37dbec02dfea0802e6ab35beeff2a4ef30851"
+      "bytes": 133188,
+      "sha256": "0356a4650cec9b7aa59010b98b3685c0e1b409454a4e987fb9e1ff35c8fe229d"
     },
     {
       "path": "scripts/parser_adapter.py",
@@ -64,23 +64,173 @@
     },
     {
       "path": "scripts/self_test.py",
-      "bytes": 13208,
-      "sha256": "fd14c87f04720af3cfdaed25bf06a3ca0cb558e908e546a28be176b60a6f66c0"
+      "bytes": 15084,
+      "sha256": "3fd0af40c86e0afd5a12e90e24042d915720411f3a8d4716f5f193e6f8fa095b"
     },
     {
       "path": "SKILL.md",
-      "bytes": 17639,
-      "sha256": "4994f97a8107ccd6ffd1751c53066fb5161ff953f6295ef6713b7b5c3703ff25"
+      "bytes": 19329,
+      "sha256": "d63be365c73a38ab65efdb023dcddaefcf6f8edd92776568b8e25158236e3432"
     },
     {
       "path": "USAGE.md",
-      "bytes": 10551,
-      "sha256": "b9b4d9afe6da28bb21b3d71ef788e7c88c324ca1c56a9cfa6246e894be25d94e"
+      "bytes": 13272,
+      "sha256": "a051ce54f3ff9d420ec17c70af57dcd1622ced349a5e160a23e20900eb9cf721"
+    },
+    {
+      "path": "vendor/PyPDF2/__init__.py",
+      "bytes": 907,
+      "sha256": "1d582a27f53ce793bee1c4ccf63d83cfee556f33d94844d598d4ee1eca9b4e8d"
+    },
+    {
+      "path": "vendor/PyPDF2/_cmap.py",
+      "bytes": 14645,
+      "sha256": "9f019fb6183b08917b0975564dae7f0463211a5a09ba05774e7ea177cd66eaee"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/__init__.py",
+      "bytes": 1720,
+      "sha256": "cb8c79b38ab4d129734a33640c3a9a237f2e0ced0be48a725f238a82d1606751"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/adobe_glyphs.py",
+      "bytes": 431492,
+      "sha256": "68c5e1a79bdaed380dc871269d2f59a80dc6fa1f137bc130ee9ee40ac80a24b6"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/pdfdoc.py",
+      "bytes": 4269,
+      "sha256": "c5f4af30562cbf1b9a490d14bbdbd90ca681d16bbce61d6e0a20758bdac07145"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/std.py",
+      "bytes": 2630,
+      "sha256": "0f240cb84a40184a52f6ecb58d67f87278fe92a4a13ce0228f9b08ed0d580fc1"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/symbol.py",
+      "bytes": 3734,
+      "sha256": "9c86864089615822623cc1ebc149661871fefdf397c842af82e466b8a5dc1809"
+    },
+    {
+      "path": "vendor/PyPDF2/_codecs/zapfding.py",
+      "bytes": 3742,
+      "sha256": "3d0c63c510bad7a778d711777b15713f55bc9cce10ad97e33b7966b4bc6913fb"
+    },
+    {
+      "path": "vendor/PyPDF2/_encryption.py",
+      "bytes": 38979,
+      "sha256": "29a6882a91b31bddb59aecc4f859100764a72ae0e1a22a059032fbb7dcaf3cec"
+    },
+    {
+      "path": "vendor/PyPDF2/_page.py",
+      "bytes": 82079,
+      "sha256": "b2ee3529e99c6d4484ea85987751d8bd61c492ecee04a1e1e81c6794972c857e"
+    },
+    {
+      "path": "vendor/PyPDF2/_protocols.py",
+      "bytes": 1486,
+      "sha256": "ed8fb941b615441ad62665afe77ea3817fd750f383ae1db920a5da798f6db842"
+    },
+    {
+      "path": "vendor/PyPDF2/_reader.py",
+      "bytes": 77206,
+      "sha256": "8b9dd7c8055ae4df546030249f2e8d75f32faec55ac0969b461500de9379a152"
+    },
+    {
+      "path": "vendor/PyPDF2/_security.py",
+      "bytes": 10628,
+      "sha256": "af02544f5fd6e3a735a50b21447db64393f919bff7fcba2b32f57dc675cd493d"
+    },
+    {
+      "path": "vendor/PyPDF2/_utils.py",
+      "bytes": 14252,
+      "sha256": "f7769ca872e9bdb06e228e7b3adfce1d0e4c780b7ed470015b08a38db3c0ed12"
+    },
+    {
+      "path": "vendor/PyPDF2/_version.py",
+      "bytes": 22,
+      "sha256": "1373fa01b9c2c1a5a4ea7751d7336a94e4d579b5fdcf9aeff6fa25b5cef5768b"
+    },
+    {
+      "path": "vendor/PyPDF2/constants.py",
+      "bytes": 13154,
+      "sha256": "d8ed608dd7664991aff1732950c288d3d3012f4808041931641345c770d72056"
+    },
+    {
+      "path": "vendor/PyPDF2/errors.py",
+      "bytes": 782,
+      "sha256": "059ef3d5d163a695cdbd68a55fc06854210617109aa576acd39256b345ec36b7"
+    },
+    {
+      "path": "vendor/PyPDF2/filters.py",
+      "bytes": 24364,
+      "sha256": "774879ae97a1a41661da2d72a9048919c8435132aecd4be35467e6da1993cdf9"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/__init__.py",
+      "bytes": 4413,
+      "sha256": "6179d7fa948f0f04943efe824121bbe81c61ab743e0779295daddb13f0719d65"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_annotations.py",
+      "bytes": 10065,
+      "sha256": "6e3c2ca055b14164e69332cef20c1e9070cc6c7f3194e074f112e6f7a13d8c92"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_base.py",
+      "bytes": 23986,
+      "sha256": "7dd40e202769cf33e543687f7c1589eb7d5d4ef602aa6d6a3d12d0c9cf5e97ca"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_data_structures.py",
+      "bytes": 51408,
+      "sha256": "70434be19dc515e68b71c4f2c33eac2015c375e31d9f2e6ff0645ccaf2b933fa"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_fit.py",
+      "bytes": 4894,
+      "sha256": "b14a03c43ff2fc9cf9cba57bf8870244783deb5d3dea85ea157b7532d386139c"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_outline.py",
+      "bytes": 1201,
+      "sha256": "eddd9e680aa83d14a1f51559c5b3c9370c276aec80d0c2a1d1c18cc659fd3537"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_rectangle.py",
+      "bytes": 9439,
+      "sha256": "cb21a46978fb4b64a1040511db73899170dfd734d1d9003edb4ed572ecb7e1b8"
+    },
+    {
+      "path": "vendor/PyPDF2/generic/_utils.py",
+      "bytes": 6272,
+      "sha256": "34c13084335b5074a3209dfd393b6230db4c5b09b4bc315bb3a3531b0d760d2f"
+    },
+    {
+      "path": "vendor/PyPDF2/LICENSE",
+      "bytes": 1605,
+      "sha256": "a97ac230e5f33ef10a5367a850eb01f91f1a0b064e34742c7794d2294557f524"
+    },
+    {
+      "path": "vendor/PyPDF2/py.typed",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "vendor/PyPDF2/types.py",
+      "bytes": 1676,
+      "sha256": "699b7e5a6677410355488f91d7f19b172d2b02920d1eab15f9fc94c26c89d125"
+    },
+    {
+      "path": "vendor/PyPDF2/xmp.py",
+      "bytes": 18354,
+      "sha256": "08237cdfc7b00e2a630e004bb63db9e9ae193e0489c4cc83f6538e41d11b843d"
     },
     {
       "path": "VERSION",
       "bytes": 6,
-      "sha256": "1e5b51cde515396a9fa762909cf8ca6584ccc564b325d2eebeea76175fe95c4d"
+      "sha256": "64d23f858ef51b0f996e4966d4e27c0371b437e2d2787890b1f7ad22d4ec5663"
     }
   ]
 }

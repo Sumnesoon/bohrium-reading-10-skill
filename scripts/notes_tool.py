@@ -33,7 +33,10 @@ from parser_adapter import (
     named_heading_title,
 )
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
+VENDOR_DIR = Path(__file__).resolve().parent.parent / "vendor"
+if VENDOR_DIR.is_dir() and str(VENDOR_DIR) not in sys.path:
+    sys.path.insert(0, str(VENDOR_DIR))
 LIGATURES = str.maketrans({
     "\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl", "\ufb03": "ffi",
     "\ufb04": "ffl", "\ufb05": "st", "\ufb06": "st",
@@ -66,7 +69,9 @@ HEADING_PREFIX_RE = re.compile(r"^" + HEADING_PREFIX_PATTERN + r"\s+")
 KNOWN_HEADING_RE = re.compile(
     r"^(?:abstract|introduction|background|related work|methods?|methodology|"
     r"experiments?|results?|discussion|conclusions?|limitations?|references|"
-    r"acknowledg(?:e)?ments?|appendix|supplementary materials?)\s*$",
+    r"acknowledg(?:e)?ments?|appendix|appendices|supplementary materials?|"
+    r"broader impact|ethical considerations|author contributions|funding|"
+    r"data availability|conflict of interest)\s*$",
     re.IGNORECASE,
 )
 CN_KNOWN_HEADING_RE = re.compile(
@@ -241,6 +246,15 @@ def fitz_version() -> str | None:
         return None
 
 
+def pypdf2_module():
+    """Return the bundled (or globally installed) PyPDF2 reader module."""
+    try:
+        module = __import__("PyPDF2")
+        return module, getattr(module, "__version__", None)
+    except Exception:
+        return None, None
+
+
 def elapsed_seconds(work: Path) -> float | None:
     """Wall-clock budget for one run.
 
@@ -322,9 +336,11 @@ def command_init(args: argparse.Namespace) -> None:
         "pymupdf_available": fitz_module()[0] is not None,
         "pymupdf_import": "pymupdf" if importlib.util.find_spec("pymupdf") else "fitz" if importlib.util.find_spec("fitz") else None,
         "pymupdf_version": fitz_version(),
+        "pypdf2_bundled": (VENDOR_DIR / "PyPDF2" / "__init__.py").is_file(),
+        "pypdf2_version": pypdf2_module()[1],
         "host_parser_discovery": ".parser/<pdf-stem>.jsonl at input, ancestor, or working directory",
         "pdfplumber": importlib.util.find_spec("pdfplumber") is not None,
-        **{cmd: shutil.which(cmd) for cmd in ("pdftotext", "pdftoppm", "tesseract")},
+        **{cmd: shutil.which(cmd) for cmd in ("pdftotext", "pdftoppm", "tesseract", "pdf-text-tool", "ocr-tool", "pdf-render-tool")},
         "rapidocr": importlib.util.find_spec("rapidocr_onnxruntime") is not None
                     or importlib.util.find_spec("rapidocr") is not None,
         "ocr_engines": sorted(available_ocr_engines()),
@@ -708,6 +724,240 @@ def augment_extraction_quality(report: dict[str, Any], work: Path) -> None:
         )
 
 
+def _pypdf2_page_lines(page: Any) -> list[dict[str, Any]]:
+    """Reconstruct lines with font size and position from PyPDF2's visitor callback.
+
+    PyPDF2 is a pure-Python fallback, not the preferred layout engine.  The line
+    geometry here is deliberately conservative: it keeps heading candidates and
+    merges body lines into paragraph-like blocks, while marking every section as
+    needing semantic review.
+    """
+
+    fragments: list[dict[str, Any]] = []
+
+    def visitor(text: str, cm: Any, tm: Any, font_dict: Any, font_size: Any) -> None:
+        cleaned = re.sub(r"\s+", " ", str(text or "")).strip()
+        if not cleaned:
+            return
+        try:
+            x = float(tm[4])
+            y = float(tm[5])
+            size = abs(float(font_size or 0))
+        except (TypeError, ValueError, IndexError):
+            return
+        fragments.append({
+            "x": x, "y": y, "size": size,
+            "font": str((font_dict or {}).get("/BaseFont", "")),
+            "text": cleaned,
+        })
+
+    try:
+        page.extract_text(visitor_text=visitor)
+    except Exception:
+        fragments = []
+    if not fragments:
+        raw = ""
+        try:
+            raw = page.extract_text() or ""
+        except Exception:
+            raw = ""
+        return [
+            {"y": 0.0, "size": 10.0, "font": "", "text": line.strip()}
+            for line in raw.splitlines() if line.strip()
+        ]
+
+    fragments.sort(key=lambda item: (-item["y"], item["x"]))
+    lines: list[list[dict[str, Any]]] = []
+    current: list[dict[str, Any]] = []
+    for fragment in fragments:
+        if current and abs(fragment["y"] - current[-1]["y"]) > 2.0:
+            lines.append(current)
+            current = []
+        current.append(fragment)
+    if current:
+        lines.append(current)
+
+    rows: list[dict[str, Any]] = []
+    for line in lines:
+        line.sort(key=lambda item: item["x"])
+        text = " ".join(item["text"] for item in line)
+        text = re.sub(r"\s+", " ", text).strip()
+        text = re.sub(r"\s+([,.;:!?%)\]}])", r"\1", text)
+        text = re.sub(r"\(\s+", "(", text)
+        rows.append({
+            "y": line[0]["y"], "size": max(item["size"] for item in line),
+            "font": " ".join(item["font"] for item in line), "text": text,
+        })
+    return rows
+
+
+def _pypdf2_page_blocks(page: Any) -> list[dict[str, str]]:
+    rows = _pypdf2_page_lines(page)
+    if not rows:
+        return []
+
+    weights: dict[float, int] = {}
+    for row in rows:
+        key = round(float(row["size"]), 1)
+        weights[key] = weights.get(key, 0) + len(row["text"])
+    body_size = max(weights.items(), key=lambda item: item[1])[0] if weights else 10.0
+    try:
+        page_height = float(page.mediabox.height)
+    except Exception:
+        page_height = 0.0
+
+    cleaned_rows: list[dict[str, Any]] = []
+    for row in rows:
+        text = row["text"]
+        if not text:
+            continue
+        if not re.search(r"[A-Za-z\u3400-\u9fff]", text):
+            continue
+        if re.fullmatch(r"(?:page\s*)?\d{1,4}", text, re.IGNORECASE):
+            continue
+        if row["size"] < body_size * 0.65 and len(text) < 30:
+            continue
+        if "arxiv:" in text.lower() and row["size"] > body_size * 1.4:
+            continue
+        # Page numbers are often merged into the right edge of a text line.
+        if page_height and (row["y"] < page_height * 0.10 or row["y"] > page_height * 0.90):
+            text = re.sub(r"\s+(?:Page\s*)?\d{1,4}$", "", text, flags=re.IGNORECASE).strip()
+        if not text:
+            continue
+        row["text"] = text
+        cleaned_rows.append(row)
+
+    def is_heading(row: dict[str, Any]) -> bool:
+        text = row["text"].strip()
+        if len(text) > 180:
+            return False
+        numbered = re.match(r"^(\d+(?:\.\d+)*)\s+(.+)$", text)
+        if numbered:
+            number, rest = numbered.groups()
+            if not rest[:1].isupper():
+                return False
+            if float(number.split(".")[0]) > 30:
+                return False
+            if len(rest.split()) < 2 and not (
+                KNOWN_HEADING_RE.fullmatch(rest)
+                or re.fullmatch(r"[A-Z][a-z]{4,}", rest)
+            ):
+                return False
+            if rest.rstrip().endswith(("-", "–", "—")):
+                return False
+            return True
+        if KNOWN_HEADING_RE.fullmatch(text) or CN_KNOWN_HEADING_RE.fullmatch(text):
+            return True
+        if re.fullmatch(r"[A-Z]\s+[A-Z][A-Za-z0-9 ,:;()'\-]{2,90}", text):
+            tokens = text.split()
+            if len(tokens) >= 2 and not all(len(token) <= 1 for token in tokens):
+                return True
+        # Deliberately do not promote font size/bold alone to a heading here:
+        # PyPDF2 cannot separate figure labels from section titles reliably.
+        return False
+
+    def heading_text(text: str) -> str:
+        # A PyPDF2 line can merge a heading with the first body sentence or a
+        # figure label because the fallback has no XY-cut.  Keep the heading
+        # prefix only when a clear sentence boundary follows a plausible title.
+        if len(text.split()) > 9:
+            for marker in (
+                " Section ", " Figure ", " Table ", " The ", " This ", " These ",
+                " We ", " In ", " For ", " Our ", " RAG-Seq ", " 50.0 ",
+            ):
+                index = text.find(marker)
+                if index > 0 and len(text[:index].split()) >= 3:
+                    text = text[:index].strip()
+                    break
+        text = re.sub(r"\s+\d{1,4}$", "", text).strip()
+        return text
+
+    blocks: list[dict[str, str]] = []
+    buffer: list[str] = []
+    previous_y: float | None = None
+    for row in cleaned_rows:
+        if is_heading(row):
+            if buffer:
+                blocks.append({"kind": "paragraph", "text": " ".join(buffer)})
+                buffer = []
+            text = heading_text(row["text"])
+            if text:
+                blocks.append({"kind": "heading", "text": text})
+            previous_y = row["y"]
+            continue
+        if buffer and previous_y is not None and (previous_y - row["y"]) > body_size * 1.65:
+            blocks.append({"kind": "paragraph", "text": " ".join(buffer)})
+            buffer = []
+        buffer.append(row["text"])
+        previous_y = row["y"]
+    if buffer:
+        blocks.append({"kind": "paragraph", "text": " ".join(buffer)})
+    return blocks
+
+
+def extract_with_pypdf2(pdf_path: Path, work: Path) -> dict[str, Any]:
+    module, version = pypdf2_module()
+    if module is None:
+        return {"ok": False, "error": "PyPDF2 is not importable (bundled vendor/PyPDF2 missing)."}
+    try:
+        reader = module.PdfReader(str(pdf_path))
+    except Exception as exc:
+        return {"ok": False, "error": f"PyPDF2 open failed: {type(exc).__name__}: {exc}"}
+    try:
+        if reader.is_encrypted and not reader.decrypt(""):
+            return {"ok": False, "error": "PDF is encrypted and PyPDF2 cannot decrypt it without a password."}
+        page_count = len(reader.pages)
+    except Exception as exc:
+        return {"ok": False, "error": f"PyPDF2 page access failed: {type(exc).__name__}: {exc}"}
+    if page_count <= 0:
+        return {"ok": False, "error": "PDF has no readable pages; it may be empty or truncated.", "status": "unavailable"}
+
+    records: list[dict[str, Any]] = []
+    page_dimensions: dict[int, tuple[float, float]] = {}
+    page_errors: list[dict[str, Any]] = []
+    for page_number, page in enumerate(reader.pages, 1):
+        try:
+            page_dimensions[page_number] = (float(page.mediabox.width), float(page.mediabox.height))
+        except Exception:
+            page_dimensions[page_number] = (0.0, 0.0)
+        try:
+            blocks = _pypdf2_page_blocks(page)
+        except Exception as exc:
+            blocks = []
+            page_errors.append({"page": page_number, "error": f"{type(exc).__name__}: {exc}"})
+        if not blocks:
+            records.append({"page": page_number, "kind": "text", "text": ""})
+        else:
+            records.extend({
+                "page": page_number, "kind": block["kind"], "text": block["text"],
+            } for block in blocks)
+
+    records_path = work / "pypdf2_records.jsonl"
+    write_text_atomic(
+        records_path,
+        "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
+    )
+    report = extract_with_host_parser(records_path, pdf_path, work)
+    pages, _ = read_jsonl(work / "pages.jsonl")
+    for page in pages:
+        width, height = page_dimensions.get(int(page.get("pdf_page", 0)), (0.0, 0.0))
+        page["width"], page["height"] = width, height
+    write_text_atomic(work / "pages.jsonl", "".join(json.dumps(page, ensure_ascii=False) + "\n" for page in pages))
+    report.update({
+        "backend": "pypdf2",
+        "import_name": "PyPDF2",
+        "version": version,
+        "page_count": page_count,
+        "page_errors": page_errors,
+        "records": str(records_path),
+    })
+    report.setdefault("warnings", []).append(
+        "PyPDF2 is a pure-Python fallback: it has no reliable column/XY-cut or font-weight model; "
+        "heading boundaries are heuristic and must be reviewed."
+    )
+    return report
+
+
 def extract_with_pdftotext(pdf_path: Path, work: Path) -> dict[str, Any]:
     executable = shutil.which("pdftotext")
     if not executable:
@@ -804,7 +1054,7 @@ def command_extract(args: argparse.Namespace) -> None:
     attempts: list[dict[str, Any]] = []
     requested = args.backend
     parser_path = discover_host_parser(pdf_path, args.parser_jsonl)
-    backends = [requested] if requested != "auto" else ["host", "pymupdf", "pdftotext"]
+    backends = [requested] if requested != "auto" else ["host", "pymupdf", "pypdf2", "pdftotext"]
     report: dict[str, Any] = {"ok": False, "error": "No PDF text backend was attempted."}
     for backend in backends:
         if backend == "host":
@@ -817,6 +1067,8 @@ def command_extract(args: argparse.Namespace) -> None:
                 report = {"ok": False, "error": f"Host parser failed: {type(exc).__name__}: {exc}"}
         elif backend == "pymupdf":
             report = extract_with_fitz(pdf_path, work)
+        elif backend == "pypdf2":
+            report = extract_with_pypdf2(pdf_path, work)
         elif backend == "pdftotext":
             report = extract_with_pdftotext(pdf_path, work)
         else:
@@ -834,6 +1086,72 @@ def command_extract(args: argparse.Namespace) -> None:
     add_change(work, "extracted_pdf" if report.get("ok") else "extraction_failed", json.dumps(report, ensure_ascii=False), ["extract_report.json"])
     record_timing(work, "extract", time.perf_counter() - started,
                   backend=report.get("backend"), ok=bool(report.get("ok")))
+    print(json.dumps(report, ensure_ascii=False))
+    if not report.get("ok"):
+        raise SystemExit(2)
+
+
+def command_ingest(args: argparse.Namespace) -> None:
+    """Ingest already-extracted text/OCR records from a platform tool or Host.
+
+    The record schema is the same conservative interface used by the Host adapter:
+    ``{"page": positive int, "kind": "text", "text": str}``.  This is the bridge for
+    platform PDF/OCR tools with unknown CLIs: the agent writes their real output
+    into this schema, then this command builds pages/blocks/sections without
+    pretending that a missing local parser succeeded.
+    """
+
+    started = time.perf_counter()
+    work = Path(args.work).resolve()
+    pdf_path = Path(args.pdf).resolve()
+    records_path = Path(args.records).resolve()
+    if not pdf_path.is_file():
+        fail(f"PDF not found: {pdf_path}")
+    if not records_path.is_file():
+        fail(f"records file not found: {records_path}")
+    records, errors = read_jsonl(records_path)
+    if errors:
+        fail("invalid records JSONL: " + "; ".join(errors[:3]))
+    normalized: list[dict[str, Any]] = []
+    for line_number, record in enumerate(records, 1):
+        if not isinstance(record, dict):
+            fail(f"records line {line_number} must be a JSON object")
+        page = record.get("page", record.get("page_number"))
+        text = record.get("text")
+        if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+            fail(f"records line {line_number}: page must be a positive integer")
+        if not isinstance(text, str):
+            fail(f"records line {line_number}: text must be a string")
+        kind = record.get("kind", "text")
+        if not isinstance(kind, str) or not kind:
+            fail(f"records line {line_number}: kind must be a nonempty string")
+        if kind.lower() == "ocr":
+            kind = "text"
+        figure_paths = record.get("figurePaths", [])
+        if not isinstance(figure_paths, list) or not all(isinstance(item, str) for item in figure_paths):
+            fail(f"records line {line_number}: figurePaths must be strings")
+        normalized.append({
+            "page": page, "kind": kind, "text": text,
+            "resourceId": record.get("resourceId"), "figurePaths": list(figure_paths),
+        })
+    if not normalized:
+        fail("records file contains no records")
+    work.mkdir(parents=True, exist_ok=True)
+    ingest_path = work / "ingest_records.jsonl"
+    write_text_atomic(
+        ingest_path,
+        "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in normalized),
+    )
+    report = extract_with_host_parser(ingest_path, pdf_path, work)
+    report.update({
+        "backend": "ingest",
+        "source": args.source,
+        "records": str(ingest_path),
+        "input_records": str(records_path),
+    })
+    write_json_atomic(work / "extract_report.json", report)
+    add_change(work, "ingested_external_text", f"Ingested {len(normalized)} records from {args.source}.", ["ingest_records.jsonl", "extract_report.json"])
+    record_timing(work, "ingest", time.perf_counter() - started, source=args.source, ok=bool(report.get("ok")))
     print(json.dumps(report, ensure_ascii=False))
     if not report.get("ok"):
         raise SystemExit(2)
@@ -1626,18 +1944,40 @@ def command_assemble(args: argparse.Namespace) -> None:
         uncertainty = uncertainty + [{"kind": "validation_errors", "detail": report["errors"]}]
     success = bool(args.request_success and report["ok"] and not report["warnings"] and contract is not None and case.get("case_id", case.get("id")) is not None)
     status = "success" if success else "partial"
+    requested_run_status = getattr(args, "run_status", "auto")
+    if requested_run_status == "success" and not success:
+        requested_run_status = "partial"
+    if requested_run_status == "auto":
+        if success:
+            run_status = "success"
+        elif not notes and (not report.get("ok") or not report.get("counts", {}).get("notes")):
+            run_status = "unable"
+        else:
+            run_status = "partial"
+    else:
+        run_status = requested_run_status
+    status_reason = getattr(args, "status_reason", "") or {
+        "success": "All machine checks passed with no unresolved warnings.",
+        "unable": "No usable paper text or notes were produced; see extract_report.json, validation_report.json and uncertainty.json for the human handoff point.",
+        "refused": "The requested material or task is outside this Skill's declared scope; no result was fabricated.",
+        "partial": "Partial result: machine checks or unresolved warnings remain; see validation_report.json and uncertainty.json.",
+    }.get(run_status, "")
+    if run_status == "refused" and not getattr(args, "status_reason", ""):
+        fail("--run-status refused requires --status-reason explaining the boundary and handoff")
     update_state(
-        work, status=status, requested_success=bool(args.request_success),
+        work, status=status, run_status=run_status, status_reason=status_reason,
+        requested_success=bool(args.request_success),
         finished_at=utc_now(), elapsed_seconds=report.get("elapsed_seconds"),
     )
     output.mkdir(parents=True, exist_ok=True)
-    add_change(work, "assembled_output", f"Assembled result.json with status={status}.", ["result.json", "notes.md", "validation_report.json"])
+    add_change(work, "assembled_output", f"Assembled result.json with status={status}, run_status={run_status}.", ["result.json", "notes.md", "validation_report.json"])
     requests = report.get("requests", request_summary(work))
     request_count: Any = requests.get("requests_used")
     if request_count is None:
         request_count = "not_measured"
     result.update({
         "case_id": case.get("case_id", case.get("id")), "status": status,
+        "run_status": run_status, "status_reason": status_reason,
         "elapsed_seconds": report.get("elapsed_seconds"), "request_count": request_count,
         "request_audit": requests,
         "structured_notes": notes, "paper_card": read_json(work / "paper_card.json", {}),
@@ -1654,7 +1994,7 @@ def command_assemble(args: argparse.Namespace) -> None:
     write_text_atomic(output / "notes.md", markdown_notes(work, args.lang))
     write_json_atomic(output / "validation_report.json", report)
     record_timing(work, "assemble", time.perf_counter() - started, status=status)
-    print(json.dumps({"ok": True, "status": status, "validation_ok": report["ok"], "errors": report["errors"], "unresolved_warnings": report["warnings"]}, ensure_ascii=False))
+    print(json.dumps({"ok": True, "status": status, "run_status": run_status, "status_reason": status_reason, "validation_ok": report["ok"], "errors": report["errors"], "unresolved_warnings": report["warnings"]}, ensure_ascii=False))
     if args.request_success and not success:
         raise SystemExit(2)
 
@@ -2183,10 +2523,16 @@ def build_parser() -> argparse.ArgumentParser:
     extract = sub.add_parser("extract", help="Extract actual PDF pages, blocks and section candidates")
     extract.add_argument("--pdf", required=True)
     extract.add_argument("--work", required=True)
-    extract.add_argument("--backend", choices=("auto", "host", "pymupdf", "pdftotext"), default="auto")
+    extract.add_argument("--backend", choices=("auto", "host", "pymupdf", "pypdf2", "pdftotext"), default="auto")
     extract.add_argument("--parser-jsonl", help="Optional Host parser JSONL; otherwise discover .parser/<pdf-stem>.jsonl")
     extract.add_argument("--force", action="store_true", help="Re-extract even if pages/blocks/sections are newer than the PDF")
     extract.set_defaults(func=command_extract)
+    ingest = sub.add_parser("ingest", help="Build pages/blocks/sections from real platform text or OCR records")
+    ingest.add_argument("--pdf", required=True)
+    ingest.add_argument("--records", required=True, help="JSONL with page, kind, text from a platform PDF/OCR tool")
+    ingest.add_argument("--source", default="platform_tool", help="Actual tool/source label for the audit trail")
+    ingest.add_argument("--work", required=True)
+    ingest.set_defaults(func=command_ingest)
     validate = sub.add_parser("validate", help="Validate notes, anchors, card and output contract")
     validate.add_argument("--case", required=True)
     validate.add_argument("--work", required=True)
@@ -2196,6 +2542,9 @@ def build_parser() -> argparse.ArgumentParser:
     assemble.add_argument("--work", required=True)
     assemble.add_argument("--output", required=True)
     assemble.add_argument("--request-success", action="store_true")
+    assemble.add_argument("--run-status", choices=("auto", "success", "partial", "unable", "refused"), default="auto",
+                          help="Four-state run status; success still requires --request-success and clean checks")
+    assemble.add_argument("--status-reason", default="", help="Required when --run-status refused; otherwise overrides the default reason")
     assemble.add_argument("--lang", choices=("zh", "en"), default="zh", help="Label language for notes.md; JSON keys stay English")
     assemble.set_defaults(func=command_assemble)
     render = sub.add_parser("render", help="Render selected real PDF pages for visual inspection")

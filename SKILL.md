@@ -5,7 +5,7 @@ description: 用于科研论文的文献总结、章节摘要、结构化笔记�
 
 # 章节对齐的证据型科研笔记
 
-版本 1.2.0｜公开仓库 https://github.com/Sumnesoon/bohrium-reading-10-skill ｜许可 MIT ｜脚本依赖 Python 3.10+，PyMuPDF 可选
+版本 1.3.0｜公开仓库 https://github.com/Sumnesoon/bohrium-reading-10-skill ｜许可 MIT ｜脚本依赖 Python 3.10+，PyMuPDF 可选，包内自带 PyPDF2 读取器
 
 ## 目标与边界
 
@@ -57,7 +57,18 @@ PYTHON="${PYTHON:-python3}"
   --pdf /actual/path/paper.pdf --work /app/work --backend auto
 ```
 
-`auto` 的真实回退顺序为：工作区或其祖先目录中的 `.parser/<论文文件名>.jsonl` Host 解析器 → PyMuPDF（同时兼容 `pymupdf` 与旧版 `fitz` 导入名）→ `pdftotext -raw`。可用 `--parser-jsonl` 指定真实解析文件，也可用 `--backend host|pymupdf|pdftotext` 固定后端。Host 文件的结构校验失败会记录真实错误；自动模式才允许继续尝试下一后端。
+`auto` 的真实回退顺序为：工作区或其祖先目录中的 `.parser/<论文文件名>.jsonl` Host 解析器 → PyMuPDF（同时兼容 `pymupdf` 与旧版 `fitz` 导入名）→ 包内 `vendor/PyPDF2`（纯 Python，无需安装）→ `pdftotext -raw`。可用 `--parser-jsonl` 指定真实解析文件，也可用 `--backend host|pymupdf|pypdf2|pdftotext` 固定后端。Host 文件的结构校验失败会记录真实错误；自动模式才允许继续尝试下一后端。PyPDF2 兜底没有坐标/XY-cut，标题与阅读顺序必须额外复核。
+
+如果平台已经通过 `pdf-text-tool` 或 `ocr-tool` 产出了真实文本，不要重复猜 CLI：
+
+```bash
+# 平台输出先由 Agent 读取真实返回，归一化为 {page, kind, text} JSONL
+"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" ingest \
+  --pdf /actual/path/paper.pdf --records /app/work/platform_text.jsonl \
+  --source platform_pdf_text_tool --work /app/work
+```
+
+`ingest` 与 Host 适配共用同一套 `pages.jsonl / blocks.jsonl / sections.json` 生成逻辑，但会在 `extract_report.json` 记录 `backend=ingest`、真实来源、输入记录数。它只接受实际存在的结果，不联网、不虚构平台工具调用。
 
 脚本生成：
 
@@ -103,7 +114,7 @@ Host 解析器常把 `Broader Impact`、`Acknowledgments`、附录 `A Implementa
 
 每次修改都会写入 `changes.jsonl`（含 reviewer、rationale、原块 ID、页码、移动块数），并重算 `pdf_page_start/end`；可审计、可回放。
 
-三个后端都不可用时必须保留部分结果并写明人工接管位置，不得假装提取成功。`pdftotext -raw` 没有坐标或字体证据，章节覆盖和阅读顺序必须额外检查。
+Host、PyMuPDF、包内 PyPDF2、`pdftotext` 四个文本后端都不可用时必须保留部分结果并写明人工接管位置，不得假装提取成功。`pdftotext -raw` 与 PyPDF2 兜底没有完整坐标或字体证据，章节覆盖和阅读顺序必须额外检查。
 
 浮动表格或图片可能物理上位于其逻辑章节标题之前。保留实际区块和阅读顺序，不要为校验而篡改；笔记按语义归属，跨章节锚点须保留真实 `section_id` 并附 `cross_section_reason`，说明实际物理位置与逻辑引用关系。
 
@@ -130,7 +141,9 @@ Host 解析器常把 `Broader Impact`、`Acknowledgments`、附录 `A Implementa
 
 OCR 和渲染只针对任务相关页面，并受请求和时间预算约束。渲染优先 PyMuPDF，不可用时使用 `pdftoppm`。中文扫描页按实际可用语言使用 `--lang chi_sim`，英文使用 `eng`，也可使用实际安装的多语言组合；不得声称未安装的语言已执行。OCR 文本与原始文本层分开保存，不能把 OCR 结果当成逐字可靠的原文。OCR 锚点须写 `source: "ocr"` 并与对应 OCR 文本匹配；视觉上更正的引句须写 `source: "rendered_page"`、确保 `render_report.json` 中对应 PNG 真实存在，并附 `visual_review: {reviewed: true, reviewer, rationale}`，说明实际从何图核验。
 
-OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
+平台声明 `ocr-tool` 时优先调用平台工具：取得真实 OCR 输出后，按 `{page, kind, text}` JSONL 归一化并 `ingest`；不得凭空假设平台参数，也不得把平台结果丢弃后改写成“未识别”。平台没有返回可用文本时，才使用本地 `ocr`，再退回渲染 + 视觉复核。
+
+OCR 不是必需依赖：本地 `ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
 
 实际发生重排、OCR、章节修正或字段修复时，记录真实变更：
 
@@ -220,6 +233,8 @@ OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidoc
 ```
 
 只有契约非空且类型正确、实际笔记和章节存在、章节/锚点/关键结果证据链通过，并且 `errors=0`、未复核 `warnings=0` 时，才可在最后一次组装时附加 `--request-success`。未通过时脚本返回非零并保持 `partial`，不得手工把状态改成成功。`status` 报告真实墙钟耗时；超过 900 秒会强制失败，接近预算时应先保留部分结果。
+
+`assemble` 同时写 `run_status`（`success / partial / unable / refused`）和 `status_reason`。`status` 仍只取 `success / partial`，以兼容平台契约；`run_status` 用来区分“材料不可读导致无法判断”和“越界拒绝”。没有可用文本或没有笔记时自动为 `unable`；主动拒绝伪造时显式传 `--run-status refused --status-reason "<边界与接管说明>"`。`run_status=success` 不能绕过机器校验。
 
 如果案例要求可编辑 Office、幻灯片或图示产物，还需生成真实文件和对应的 PDF/PNG 渲染预览；不得伪造预览。
 

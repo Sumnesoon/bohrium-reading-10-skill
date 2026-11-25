@@ -1,0 +1,76 @@
+{
+  "generated_by": "check_package.py",
+  "root": "D:\\波尔\\bohrium\\reading-10\\submission",
+  "files": [
+    {
+      "path": "assets/paper_card.template.json",
+      "bytes": 490,
+      "sha256": "ead12ead636510a450520f12109fa19fce3fe980b08f44ac52e04586910236a0"
+    },
+    {
+      "path": "examples/minimal_example.md",
+      "bytes": 1654,
+      "sha256": "5557439523b263a4585aa674f6dd231c7ae3bb312ac35fddd3121c8712ac5870"
+    },
+    {
+      "path": "GITHUB_URL.txt",
+      "bytes": 63,
+      "sha256": "f603c50f6f37866e474a8dd1b3ad35ddec8b8258834cdf4584293e511196bee1"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1094,
+      "sha256": "c7ab98c5fffc8709e75051b32a317053b866c58d5d523ce0b8ca2dbd2b0bcccf"
+    },
+    {
+      "path": "references/anchor-format.md",
+      "bytes": 4170,
+      "sha256": "8abd07a58e5d499b1d494a70f4de0f984b8818aae06c3e706efe1901cbf533f0"
+    },
+    {
+      "path": "references/field-dictionary.md",
+      "bytes": 4667,
+      "sha256": "36ec9913083f52f40800e1c4d4aefa05e11cc131d4e0bf0d2053bb39b769cafb"
+    },
+    {
+      "path": "references/validation-and-evaluation.md",
+      "bytes": 4151,
+      "sha256": "c069c5e57c945652bde7be74cfd4e2a853b78e818d24877684b6af3a4a900f7c"
+    },
+    {
+      "path": "scripts/check_package.py",
+      "bytes": 6822,
+      "sha256": "6c8fbf9dc786f45a1b79961821633b78bec9f6d3c718e3332b7f8fc44cfd91ba"
+    },
+    {
+      "path": "scripts/notes_tool.py",
+      "bytes": 113215,
+      "sha256": "584779eb1d5f5837853973e5c452ae8d537550a6ee04fd38334e1fceaf9bf08e"
+    },
+    {
+      "path": "scripts/parser_adapter.py",
+      "bytes": 32678,
+      "sha256": "6db64e3a08397428705432d49cf5f263be90fca96508ae9d6e773261a7028f37"
+    },
+    {
+      "path": "scripts/self_test.py",
+      "bytes": 13208,
+      "sha256": "fd14c87f04720af3cfdaed25bf06a3ca0cb558e908e546a28be176b60a6f66c0"
+    },
+    {
+      "path": "SKILL.md",
+      "bytes": 17320,
+      "sha256": "5e80d5ceac83734b7703d3f588c9775e1b755bcd4a7eb958833b19a65ed778be"
+    },
+    {
+      "path": "USAGE.md",
+      "bytes": 8327,
+      "sha256": "546e63f469a379bab67e378da8266311ab2e79778e0e1aff583a98b484326efd"
+    },
+    {
+      "path": "VERSION",
+      "bytes": 6,
+      "sha256": "1e5b51cde515396a9fa762909cf8ca6584ccc564b325d2eebeea76175fe95c4d"
+    }
+  ]
+}

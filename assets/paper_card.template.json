@@ -1,0 +1,8 @@
+{
+  "research_question": {"status": "unresolved", "content": null, "source_note_ids": []},
+  "data": {"status": "unresolved", "content": null, "source_note_ids": []},
+  "method": {"status": "unresolved", "content": null, "source_note_ids": []},
+  "results": {"status": "unresolved", "content": null, "source_note_ids": []},
+  "conclusion": {"status": "unresolved", "content": null, "source_note_ids": []},
+  "limitations": {"status": "unresolved", "content": null, "source_note_ids": []}
+}

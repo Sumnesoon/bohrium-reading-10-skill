@@ -1,0 +1,28 @@
+name: sync-clean
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sync-clean.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove stray report and rebuild manifest
+        run: |
+          set -e
+          git rm --ignore-unmatch check_out.json
+          python3 scripts/check_package.py .
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove stray check output; rebuild manifest" || echo "no changes"
+          git push

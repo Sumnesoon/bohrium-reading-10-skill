@@ -1,6 +1,6 @@
 {
   "generated_by": "check_package.py",
-  "root": "D:\\波尔\\bohrium\\reading-10\\submission",
+  "root": "submission",
   "files": [
     {
       "path": "assets/paper_card.template.json",
@@ -39,8 +39,8 @@
     },
     {
       "path": "scripts/check_package.py",
-      "bytes": 6822,
-      "sha256": "6c8fbf9dc786f45a1b79961821633b78bec9f6d3c718e3332b7f8fc44cfd91ba"
+      "bytes": 6864,
+      "sha256": "ff1cbb1b06b63d5e1d57480ec68c46ba841371f8b74496b78c2da3f46ace42f7"
     },
     {
       "path": "scripts/notes_tool.py",

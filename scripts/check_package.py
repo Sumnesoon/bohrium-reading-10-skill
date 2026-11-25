@@ -120,7 +120,7 @@ def main() -> None:
         warnings.append("LICENSE is missing; reusers cannot tell the terms")
     github = check_github_url(root, errors, warnings)
     manifest = {
-        "generated_by": "check_package.py", "root": str(root),
+        "generated_by": "check_package.py", "root": root.name,
         "files": [
             {"path": str(path.relative_to(root)).replace("\\", "/"), "bytes": path.stat().st_size,
              "sha256": sha256_of(path)}
@@ -128,9 +128,9 @@ def main() -> None:
                                key=lambda item: str(item).lower())
         ],
     }
-    (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     for path in ((root.parent / "submission.sha256"),):
-        path.write_text("".join(f"{row['sha256']}  {row['path']}\n" for row in manifest["files"]), encoding="utf-8")
+        path.write_text("".join(f"{row['sha256']}  {row['path']}\n" for row in manifest["files"]), encoding="utf-8", newline="\n")
     report = {
         "ok": not errors, "root": str(root), "file_count": len(files),
         "total_bytes": total, "limits": {"files": MAX_FILES, "single_bytes": MAX_SINGLE, "total_bytes": MAX_TOTAL},
@@ -140,7 +140,7 @@ def main() -> None:
         "semantic_review_required": "Package checks cannot prove scientific correctness, fair baseline gains or compliance of an unseen case result.",
     }
     print(json.dumps(report, ensure_ascii=False))
-    (root.parent / "package_check.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (root.parent / "package_check.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     raise SystemExit(0 if not errors else 2)
 
 

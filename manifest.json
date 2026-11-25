@@ -34,8 +34,8 @@
     },
     {
       "path": "references/validation-and-evaluation.md",
-      "bytes": 4151,
-      "sha256": "c069c5e57c945652bde7be74cfd4e2a853b78e818d24877684b6af3a4a900f7c"
+      "bytes": 4343,
+      "sha256": "0c469d009637bfddc0e66b1eb754256421a851d685ff6fb5366be344705b581c"
     },
     {
       "path": "scripts/check_package.py",
@@ -44,8 +44,8 @@
     },
     {
       "path": "scripts/notes_tool.py",
-      "bytes": 113215,
-      "sha256": "584779eb1d5f5837853973e5c452ae8d537550a6ee04fd38334e1fceaf9bf08e"
+      "bytes": 114238,
+      "sha256": "8099b57e343ea3f6f5ed362fa95090e46be3bdf48f2e450ab9b0241fa4cbce36"
     },
     {
       "path": "scripts/parser_adapter.py",
@@ -64,8 +64,8 @@
     },
     {
       "path": "USAGE.md",
-      "bytes": 8327,
-      "sha256": "546e63f469a379bab67e378da8266311ab2e79778e0e1aff583a98b484326efd"
+      "bytes": 8633,
+      "sha256": "d3702044565be4432b3c3b89b9ab433af7b5cb12cbb6125788425ffb36fa26ed"
     },
     {
       "path": "VERSION",

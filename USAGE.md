@@ -70,6 +70,8 @@ PYTHON="${PYTHON:-python3}"
 
 `status` 输出 `requests_used`、`requests_remaining`、`request_source`（`ledger`/`native`/`unknown`）和 `stage_seconds`。超过 64 条账本记录时 `validate` 报错。`extract` 会复用比 PDF 新的 `pages/blocks/sections`（`--force` 可强制重跑），各阶段耗时写入 `timings.jsonl`；墙钟 700 秒起给出 `deadline_warning`。
 
+`assemble` 结束时会把 `finished_at` 与 `elapsed_seconds` 冻结进 `run_state.json`：之后再跑 `validate` 或 `status`，报告的是那一次运行的时长，而不是此后的空闲时间。因此复核旧结果不会被误判为“超出 900 秒”，新的运行仍按墙钟实时累计。
+
 哪些命令消耗模型请求：`extract`、`validate`、`assemble`、`render`、`ocr`、`sections`、`status` 都是纯本地脚本，不消耗；只有 Agent 自己调用模型（写笔记、写卡片、写契约）才需要 `request` 记账。
 
 ## 输入

@@ -131,8 +131,6 @@ OCR 和渲染只针对任务相关页面，并受请求和时间预算约束。�
 
 OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
 
-OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
-
 实际发生重排、OCR、章节修正或字段修复时，记录真实变更：
 
 ```bash

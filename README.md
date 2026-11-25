@@ -45,7 +45,7 @@ python scripts/parser_adapter.py --self-test
 python scripts/self_test.py --work-root /tmp/self-test
 ```
 
-当前版本：`self_test.py` 29 项、`parser_adapter.py` 20 项检查全部通过；资源包 16 个 UTF-8 文件，单文件与总量均在赛题限制内（实际字节数见 `manifest.json`）。
+当前版本：`self_test.py` 29 项、`parser_adapter.py` 20 项检查全部通过；资源包 16 个资源文件（另有 `manifest.json`，实际提交共 17 个文本文件），单文件与总量均在赛题限制内（实际字节数见 `manifest.json`）。
 
 ## 设计要点
 

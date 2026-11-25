@@ -10,10 +10,18 @@
 - 优先解析 Host `.parser/<pdf-stem>.jsonl`，读取真实 `page/kind/text/resourceId/figurePaths`；不重新解析已经存在的预提取答案，只把原始解析区块转换为可复核结构。
 - 可选 PyMuPDF：用于文本、区块、字体和渲染；同时尝试 `pymupdf` 与旧版 `fitz`，在 `environment.json` 记录导入名和实际包版本。脚本不会自动联网安装依赖。
 - 可选 Poppler `pdftotext`/`pdfinfo`/`pdftoppm`：用于无 PyMuPDF 时的文本与渲染回退。
-- 可选 Poppler `pdftotext`/`pdfinfo`/`pdftoppm`：用于无 PyMuPDF 时的文本与渲染回退。
 - OCR 完全可选：`ocr` 会自动使用已存在的 `tesseract` 或 `rapidocr`，都没有时诚实退出 2 并记录 `fallback: render+visual_review`。无文本层的扫描件依然可以走“渲染 PNG + `rendered_page` 锚点 + `visual_review`”，或在平台侧直接用 Host 解析器给出的文本。
 
 版本、命令、后端和失败尝试必须按实际运行记录。资源包不包含 OCR 模型或第三方二进制文件；任何依赖未安装都不会触发自动联网安装，也不影响无 OCR 路径的完整流程。
+
+### 版本、安装方式与来源
+
+- Python：最低 3.10；本包开发与自查使用 3.13.18。标准库即可完成 `init / validate / assemble`。
+- PyMuPDF（可选）：开发机为 1.27.2.2，未锁定版本；安装 `python3 -m pip install pymupdf`。缺失时 `extract` 继续尝试 `pdftotext`，`render` 继续尝试 `pdftoppm`。
+- Poppler（可选）：安装 `sudo apt-get install poppler-utils`（Debian/Ubuntu）或对应发行版包管理器；提供 `pdftotext / pdfinfo / pdftoppm`。
+- OCR（可选）：`tesseract`（`sudo apt-get install tesseract-ocr`，中文加 `tesseract-ocr-chi-sim`）或 `python3 -m pip install rapidocr_onnxruntime`；两者都没有时走渲染 + 视觉复核。
+- 路径：脚本从 `SKILL_ROOT` 解析，默认安装位置 `/skills/weekly-skill`；输入 `/input`，工作区 `/app/work`，输出 `/app/output`。
+- 来源：本包脚本与文档为本作品原创，许可 MIT；Host `.parser` 数据来自平台实际解析结果，不预置答案。
 
 ## 典型调用
 
@@ -72,15 +80,6 @@ PYTHON="${PYTHON:-python3}"
 `status` 输出 `requests_used`、`requests_remaining`、`request_source`（`ledger`/`native`/`unknown`）和 `stage_seconds`。超过 64 条账本记录时 `validate` 报错。`extract` 会复用比 PDF 新的 `pages/blocks/sections`（`--force` 可强制重跑），各阶段耗时写入 `timings.jsonl`；墙钟 700 秒起给出 `deadline_warning`。
 
 `assemble` 结束时会把 `finished_at` 与 `elapsed_seconds` 冻结进 `run_state.json`：之后再跑 `validate` 或 `status`，报告的是那一次运行的时长，而不是此后的空闲时间。因此复核旧结果不会被误判为“超出 900 秒”，新的运行仍按墙钟实时累计。
-
-扫描件与图片页按需渲染或 OCR，两步都不是必需：
-
-```bash
-"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" render --pdf /input/scan.pdf --pages 1-3 --work /app/work
-"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" ocr --pdf /input/scan.pdf --pages 1-3 --work /app/work --engine auto
-```
-
-`ocr` 的引擎选择：`auto` 先找 `tesseract`，再找 `rapidocr`；可用 `--engine tesseract|rapidocr` 指定。没有可用引擎时返回 2，`ocr_report.json` 记 `needs_ocr_review=true` 与 `fallback=render+visual_review`；扫描页仍可只靠渲染 PNG 加视觉复核走通。
 
 扫描件与图片页按需渲染或 OCR，两步都不是必需：
 

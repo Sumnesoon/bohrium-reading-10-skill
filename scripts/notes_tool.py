@@ -324,7 +324,11 @@ def command_init(args: argparse.Namespace) -> None:
         "pymupdf_version": fitz_version(),
         "host_parser_discovery": ".parser/<pdf-stem>.jsonl at input, ancestor, or working directory",
         "pdfplumber": importlib.util.find_spec("pdfplumber") is not None,
-        **{cmd: shutil.which(cmd) for cmd in ("pdftotext", "pdftoppm", "tesseract")}, 
+        **{cmd: shutil.which(cmd) for cmd in ("pdftotext", "pdftoppm", "tesseract")},
+        "rapidocr": importlib.util.find_spec("rapidocr_onnxruntime") is not None
+                    or importlib.util.find_spec("rapidocr") is not None,
+        "ocr_engines": sorted(available_ocr_engines()),
+        "ocr_optional": "OCR is optional: text PDFs use the text layer/Host parser, scanned pages can use render + rendered_page anchors with visual_review; no reviewer-side installation is required.",
     }
     discovered_pdfs = [str(path) for path in input_dir.rglob("*.pdf") if path.is_file()] if input_dir.exists() else []
     supplied_paths = [Path(value).resolve() for value in args.pdf]
@@ -1788,6 +1792,59 @@ def render_page_png(pdf_path: Path, page_number: int, dpi: int, target: Path) ->
     return image_path
 
 
+def available_ocr_engines() -> dict[str, str]:
+    """OCR engines already usable in this environment; nothing has to be installed by a reviewer."""
+
+    engines: dict[str, str] = {}
+    executable = shutil.which("tesseract")
+    if executable:
+        engines["tesseract"] = executable
+    module = "rapidocr_onnxruntime" if importlib.util.find_spec("rapidocr_onnxruntime") else (
+        "rapidocr" if importlib.util.find_spec("rapidocr") else None)
+    if module:
+        engines["rapidocr"] = f"python:{module}"
+    return engines
+
+
+def _rapidocr_text(recognizer: Any, image_path: Path) -> str:
+    output = recognizer(str(image_path))
+    if isinstance(output, tuple):
+        lines = [str(item[1]) for item in (output[0] or []) if len(item) > 1 and str(item[1]).strip()]
+    else:
+        lines = [str(text) for text in (getattr(output, "txts", None) or []) if str(text).strip()]
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def make_page_text_reader(engine: str, lang: str, timeout: int):
+    """Return a callable that turns one rendered page image into text for the chosen engine."""
+
+    if engine == "tesseract":
+        executable = shutil.which("tesseract")
+        if not executable:
+            raise RuntimeError("tesseract requested but not found on PATH")
+
+        def read_tesseract(image_path: Path) -> str:
+            completed = subprocess.run(
+                [executable, str(image_path), "stdout", "-l", lang],
+                capture_output=True, encoding="utf-8", errors="replace", timeout=timeout, check=False,
+            )
+            if completed.returncode != 0:
+                raise RuntimeError(f"tesseract failed: {completed.stderr.strip()}")
+            return completed.stdout
+
+        return read_tesseract
+
+    if engine == "rapidocr":
+        module_name = "rapidocr_onnxruntime" if importlib.util.find_spec("rapidocr_onnxruntime") else "rapidocr"
+        if module_name == "rapidocr" and importlib.util.find_spec("rapidocr") is None:
+            raise RuntimeError("rapidocr requested but no rapidocr package is importable")
+        module = importlib.import_module(module_name)
+        recognizer = module.RapidOCR()
+        return lambda image_path: _rapidocr_text(recognizer, image_path)
+
+    raise RuntimeError(f"unsupported OCR engine: {engine}")
+
+
 def command_render(args: argparse.Namespace) -> None:
     work = Path(args.work).resolve()
     pdf_path = Path(args.pdf).resolve()
@@ -1814,10 +1871,27 @@ def command_render(args: argparse.Namespace) -> None:
 def command_ocr(args: argparse.Namespace) -> None:
     work = Path(args.work).resolve()
     pdf_path = Path(args.pdf).resolve()
-    executable = shutil.which("tesseract")
-    report: dict[str, Any] = {"pdf": str(pdf_path), "timestamp": utc_now(), "ocr_pages": []}
-    if not executable:
-        report.update({"ok": False, "error": "Tesseract is unavailable. No OCR text was produced; use a Host OCR tool or mark the affected pages unverified."})
+    engines = available_ocr_engines()
+    requested = getattr(args, "engine", "auto")
+    if requested == "auto":
+        engine = "tesseract" if "tesseract" in engines else ("rapidocr" if "rapidocr" in engines else None)
+    else:
+        engine = requested if requested in engines else None
+    report: dict[str, Any] = {
+        "pdf": str(pdf_path), "timestamp": utc_now(), "ocr_pages": [],
+        "engine": engine or requested, "available_engines": sorted(engines),
+    }
+    if engine is None:
+        report.update({
+            "ok": False,
+            "needs_ocr_review": True,
+            "fallback": "render+visual_review",
+            "error": (
+                f"No OCR engine available (requested={requested}). OCR is optional: PDFs with a text layer, "
+                "the Host parser, or `render` + `rendered_page` anchors with a visual_review record all work "
+                "without installing anything. Nothing must be configured for review."
+            ),
+        })
         write_json_atomic(work / "ocr_report.json", report)
         add_change(work, "ocr_unavailable", report["error"], ["ocr_report.json"])
         print(json.dumps(report, ensure_ascii=False))
@@ -1826,19 +1900,15 @@ def command_ocr(args: argparse.Namespace) -> None:
         pages = parse_pages(args.pages, pdf_page_count(pdf_path))
         target = work / "ocr"
         target.mkdir(parents=True, exist_ok=True)
+        reader = make_page_text_reader(engine, args.lang, args.timeout)
         for page_number in pages:
             image_path = render_page_png(pdf_path, page_number, args.dpi, target)
             text_path = target / f"page_{page_number:04d}.txt"
-            completed = subprocess.run(
-                [executable, str(image_path), "stdout", "-l", args.lang],
-                capture_output=True, encoding="utf-8", errors="replace", timeout=args.timeout, check=False,
-            )
-            if completed.returncode != 0:
-                raise RuntimeError(f"Tesseract page {page_number} failed: {completed.stderr.strip()}")
-            write_text_atomic(text_path, completed.stdout)
+            text = reader(image_path)
+            write_text_atomic(text_path, text)
             report["ocr_pages"].append({
                 "pdf_page": page_number, "image": str(image_path), "text": str(text_path),
-                "source": "ocr", "character_count": len(completed.stdout),
+                "source": "ocr", "engine": engine, "character_count": len(text),
                 "requires_semantic_review": True,
             })
         report["ok"] = True
@@ -2134,9 +2204,11 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--dpi", type=int, default=160)
     render.add_argument("--work", required=True)
     render.set_defaults(func=command_render)
-    ocr = sub.add_parser("ocr", help="OCR selected pages only when Tesseract is actually available")
+    ocr = sub.add_parser("ocr", help="OCR selected pages with any available engine; optional and not required for review")
     ocr.add_argument("--pdf", required=True)
     ocr.add_argument("--pages", required=True)
+    ocr.add_argument("--engine", choices=("auto", "tesseract", "rapidocr"), default="auto",
+                     help="auto prefers an installed tesseract, then rapidocr; no engine means exit 2 with the visual fallback recorded")
     ocr.add_argument("--dpi", type=int, default=220)
     ocr.add_argument("--lang", default="eng")
     ocr.add_argument("--timeout", type=int, default=60)

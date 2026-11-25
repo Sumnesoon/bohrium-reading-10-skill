@@ -129,6 +129,10 @@ Host 解析器常把 `Broader Impact`、`Acknowledgments`、附录 `A Implementa
 
 OCR 和渲染只针对任务相关页面，并受请求和时间预算约束。渲染优先 PyMuPDF，不可用时使用 `pdftoppm`。中文扫描页按实际可用语言使用 `--lang chi_sim`，英文使用 `eng`，也可使用实际安装的多语言组合；不得声称未安装的语言已执行。OCR 文本与原始文本层分开保存，不能把 OCR 结果当成逐字可靠的原文。OCR 锚点须写 `source: "ocr"` 并与对应 OCR 文本匹配；视觉上更正的引句须写 `source: "rendered_page"`、确保 `render_report.json` 中对应 PNG 真实存在，并附 `visual_review: {reviewed: true, reviewer, rationale}`，说明实际从何图核验。
 
+OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
+
+OCR 不是必需依赖：`ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`，两者都没有时返回 2 并记录 `fallback: render+visual_review`。评审与运行环境不需要额外安装任何东西；扫描页也可以只靠渲染 + 视觉复核完成。
+
 实际发生重排、OCR、章节修正或字段修复时，记录真实变更：
 
 ```bash

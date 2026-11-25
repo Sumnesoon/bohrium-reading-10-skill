@@ -9,10 +9,11 @@
 - Python 3.10 或更高版本；标准库完成初始化、校验和组装；默认启动器为 `python3`，Windows 可设置 `PYTHON=python`。
 - 优先解析 Host `.parser/<pdf-stem>.jsonl`，读取真实 `page/kind/text/resourceId/figurePaths`；不重新解析已经存在的预提取答案，只把原始解析区块转换为可复核结构。
 - 可选 PyMuPDF：用于文本、区块、字体和渲染；同时尝试 `pymupdf` 与旧版 `fitz`，在 `environment.json` 记录导入名和实际包版本。脚本不会自动联网安装依赖。
-- 可选 Poppler `pdftotext`/`pdfinfo`/`pdftoppm`：用于无 PyMuPDF 时的文本与渲染回退；OCR 只在实际存在 Tesseract 及所需语言时执行。
-- 不依赖个人文件、凭据、网络下载、手工复制隐藏答案或本机专用路径。
+- 可选 Poppler `pdftotext`/`pdfinfo`/`pdftoppm`：用于无 PyMuPDF 时的文本与渲染回退。
+- 可选 Poppler `pdftotext`/`pdfinfo`/`pdftoppm`：用于无 PyMuPDF 时的文本与渲染回退。
+- OCR 完全可选：`ocr` 会自动使用已存在的 `tesseract` 或 `rapidocr`，都没有时诚实退出 2 并记录 `fallback: render+visual_review`。无文本层的扫描件依然可以走“渲染 PNG + `rendered_page` 锚点 + `visual_review`”，或在平台侧直接用 Host 解析器给出的文本。
 
-版本、命令、后端和失败尝试必须按实际运行记录。资源包不包含 OCR 模型或第三方二进制文件；依赖未安装不会触发自动联网安装。
+版本、命令、后端和失败尝试必须按实际运行记录。资源包不包含 OCR 模型或第三方二进制文件；任何依赖未安装都不会触发自动联网安装，也不影响无 OCR 路径的完整流程。
 
 ## 典型调用
 
@@ -71,6 +72,24 @@ PYTHON="${PYTHON:-python3}"
 `status` 输出 `requests_used`、`requests_remaining`、`request_source`（`ledger`/`native`/`unknown`）和 `stage_seconds`。超过 64 条账本记录时 `validate` 报错。`extract` 会复用比 PDF 新的 `pages/blocks/sections`（`--force` 可强制重跑），各阶段耗时写入 `timings.jsonl`；墙钟 700 秒起给出 `deadline_warning`。
 
 `assemble` 结束时会把 `finished_at` 与 `elapsed_seconds` 冻结进 `run_state.json`：之后再跑 `validate` 或 `status`，报告的是那一次运行的时长，而不是此后的空闲时间。因此复核旧结果不会被误判为“超出 900 秒”，新的运行仍按墙钟实时累计。
+
+扫描件与图片页按需渲染或 OCR，两步都不是必需：
+
+```bash
+"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" render --pdf /input/scan.pdf --pages 1-3 --work /app/work
+"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" ocr --pdf /input/scan.pdf --pages 1-3 --work /app/work --engine auto
+```
+
+`ocr` 的引擎选择：`auto` 先找 `tesseract`，再找 `rapidocr`；可用 `--engine tesseract|rapidocr` 指定。没有可用引擎时返回 2，`ocr_report.json` 记 `needs_ocr_review=true` 与 `fallback=render+visual_review`；扫描页仍可只靠渲染 PNG 加视觉复核走通。
+
+扫描件与图片页按需渲染或 OCR，两步都不是必需：
+
+```bash
+"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" render --pdf /input/scan.pdf --pages 1-3 --work /app/work
+"$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" ocr --pdf /input/scan.pdf --pages 1-3 --work /app/work --engine auto
+```
+
+`ocr` 的引擎选择：`auto` 先找 `tesseract`，再找 `rapidocr`；可用 `--engine tesseract|rapidocr` 指定。没有可用引擎时返回 2，`ocr_report.json` 记 `needs_ocr_review=true` 与 `fallback=render+visual_review`；扫描页仍可只靠渲染 PNG 加视觉复核走通。
 
 哪些命令消耗模型请求：`extract`、`validate`、`assemble`、`render`、`ocr`、`sections`、`status` 都是纯本地脚本，不消耗；只有 Agent 自己调用模型（写笔记、写卡片、写契约）才需要 `request` 记账。
 

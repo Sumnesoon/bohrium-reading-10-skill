@@ -1,11 +1,12 @@
 # 章节对齐的证据型科研笔记（section-evidence-notes）
 
-版本 1.2.0｜MIT License｜Python 3.10+（PyMuPDF 可选）
+版本 1.2.0｜MIT License｜Python 3.10+（PyMuPDF 可选，OCR 可选）
 
 本仓库是“文献总结与结构化笔记”赛题的参赛作品：一个把真实论文转成**按原文章节组织、可回链原文、可继续复用**的结构化笔记的 Skill。它不输出预先写好的摘要模板，也不是任何论文的预置答案。
 
 ## 目录
 
+- `REVIEWER_GUIDE.md`：评审零配置指南（先读这一份）。
 - `SKILL.md`：技能入口，说明用途、调用方式、约束与完成前复核清单。
 - `USAGE.md`：完整调用步骤、输入输出解释、方法与维护说明。
 - `references/anchor-format.md`：章节、笔记与锚点的接口格式与规范化规则。
@@ -44,7 +45,7 @@ python scripts/parser_adapter.py --self-test
 python scripts/self_test.py --work-root /tmp/self-test
 ```
 
-当前版本：`self_test.py` 29 项、`parser_adapter.py` 20 项检查全部通过；资源包 15 个 UTF-8 文件、210,233 字节，未超过 50 文件 / 500KB 单文件 / 2MB 总量的限制。
+当前版本：`self_test.py` 29 项、`parser_adapter.py` 20 项检查全部通过；资源包 16 个 UTF-8 文件、222,160 字节，未超过 50 文件 / 500KB 单文件 / 2MB 总量的限制。
 
 ## 设计要点
 
@@ -53,11 +54,17 @@ python scripts/self_test.py --work-root /tmp/self-test
 - **找得回**：每条笔记带 PDF 页序、逐字引句与区块 ID；引句经固定规范化后逐页匹配，匹配率与锚点有效率写入 `validation_report.json`。
 - **用得上**：稳定 ID、统一字段、中文可读输出（`--lang zh`）与 JSON 同源；`timings.jsonl` 与请求账本（64 次上限）记录真实预算。
 
+## OCR 与依赖：评审侧无需配置
+
+- 有文本层的 PDF 走文本层或平台 Host 解析器，不碰 OCR。
+- 扫描件优先用 Host 文本；没有时用 `render` 生成真实 PNG，再用 `rendered_page` 锚点加 `visual_review`。
+- `ocr` 自动选用已存在的 `tesseract` 或 `rapidocr`；两者都没有时退出码 2，并记录 `fallback: render+visual_review`。**不需要安装任何 OCR 组件。**
+
 ## 证据边界
 
 - 机器校验只证明结构与文本匹配，不证明引句支持论断；语义复核仍需人工或模型完成。
 - 本仓库不包含、也不声称包含平台正式三案例的答案或官方评分。
-- 本机无 Tesseract，`ocr` 在缺少依赖时诚实退出 2；渲染优先 PyMuPDF，其次 `pdftoppm`。
+- 跨论文对照尚未补齐，现有 benchmark 只覆盖 ColBERT 单案例。
 
 ## 许可
 

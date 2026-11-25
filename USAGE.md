@@ -41,7 +41,7 @@ PYTHON="${PYTHON:-python3}"
 
 `--pdf` 在已知实际文件路径时推荐使用，可重复提供，也可位于输入目录之外；未提供时只递归发现 `--input-dir` 下的 PDF。路径不存在的显式文件会报错，不会被静默忽略。
 
-`--request-success` 只能用于最后一次，且契约类型/非空性、章节、笔记和证据校验均通过，未复核警告为零时。带代码的警告须先修正，或通过 `review --target ... --code ... --reviewer ... --rationale ...` 记录实际复核决定。`status --work ...` 显示自 `init` 起的真实墙钟耗时；超过 900 秒禁止成功。失败时脚本返回非零并保留 `partial`。
+`--request-success` 只能用于最后一次，且契约类型/非空性、章节、笔记和证据校验均通过，未复核警告为零时。带代码的警告须先修正，或通过 `review --target ... --code ... --reviewer ... --rationale ...` 记录实际复核决定。`status --work ...` 显示该次运行的墙钟耗时（已组装完成的行读取冻结值，未完成的实时累计）；超过 900 秒禁止成功。失败时脚本返回非零并保留 `partial`。
 
 `key_results` 的每项和 `evidence` 必须绑定真实 `note_id`/`source_note_ids` 或给出直接页码/引句锚点。OCR 与渲染锚点分别要求 OCR 文本匹配或真实渲染 PNG 加 `visual_review` 记录，不能仅用文本层不存在的一句话代替视觉验证。
 

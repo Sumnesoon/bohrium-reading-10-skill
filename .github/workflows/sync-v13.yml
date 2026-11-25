@@ -1,0 +1,33 @@
+name: sync-v13
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sync-v13.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch v1.2 review-ready files
+        run: |
+          curl -fsSL "https://aka.doubaocdn.com/s/zPDSmpU8T8" -o scripts/notes_tool.py
+          curl -fsSL "https://aka.doubaocdn.com/s/wfPDmAYpom" -o USAGE.md
+          curl -fsSL "https://aka.doubaocdn.com/s/IrbiPJAzqk" -o SKILL.md
+          curl -fsSL "https://aka.doubaocdn.com/s/MQJYEVUem4" -o REVIEWER_GUIDE.md
+          ls -l scripts/notes_tool.py USAGE.md SKILL.md REVIEWER_GUIDE.md
+          python3 scripts/check_package.py .
+          python3 -c "import json,pathlib; p=pathlib.Path('manifest.json'); d=json.loads(p.read_text(encoding='utf-8')); d['root']='submission'; p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')"
+          rm -f submission.sha256
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/notes_tool.py USAGE.md SKILL.md REVIEWER_GUIDE.md manifest.json
+          git commit -m "v1.2 review-ready: optional OCR engines, zero-config reviewer guide" || echo "no changes"
+          git push

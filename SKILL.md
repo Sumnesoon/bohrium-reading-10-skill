@@ -30,6 +30,7 @@ description: 用于科研论文的文献总结、章节摘要、结构化笔记�
 先设置可移植的 Python 启动器（Linux 通常为 `python3`，Windows 可设为 `python`）。初始化会递归发现 `/input` 下的 PDF；不要照抄不存在的占位路径：
 
 ```bash
+SKILL_ROOT="${SKILL_ROOT:-/skills/weekly-skill}"
 PYTHON="${PYTHON:-python3}"
 "$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" init \
   --case /input/case.json --task /input/task.md \

@@ -9,8 +9,8 @@
     },
     {
       "path": "examples/minimal_example.md",
-      "bytes": 1654,
-      "sha256": "5557439523b263a4585aa674f6dd231c7ae3bb312ac35fddd3121c8712ac5870"
+      "bytes": 1703,
+      "sha256": "22dce9a1a2d6690557071a7e032ad191f68936262eb5f7b0eec0bacd158e60f5"
     },
     {
       "path": "GITHUB_URL.txt",
@@ -69,13 +69,13 @@
     },
     {
       "path": "SKILL.md",
-      "bytes": 17590,
-      "sha256": "e8c758997c9abe1098602cc75c7404b3b7c7ccf472f8fdde37810c56bba34221"
+      "bytes": 17639,
+      "sha256": "4994f97a8107ccd6ffd1751c53066fb5161ff953f6295ef6713b7b5c3703ff25"
     },
     {
       "path": "USAGE.md",
-      "bytes": 10502,
-      "sha256": "9924881d6124828a4b6ab98c479c7a16545f193116752a01473c9b4f2cd7de50"
+      "bytes": 10551,
+      "sha256": "b9b4d9afe6da28bb21b3d71ef788e7c88c324ca1c56a9cfa6246e894be25d94e"
     },
     {
       "path": "VERSION",

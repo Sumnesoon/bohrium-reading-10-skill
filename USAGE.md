@@ -28,6 +28,7 @@
 设 `SKILL_ROOT` 为已加载的技能目录：
 
 ```bash
+SKILL_ROOT="${SKILL_ROOT:-/skills/weekly-skill}"
 PYTHON="${PYTHON:-python3}"
 "$PYTHON" "$SKILL_ROOT/scripts/notes_tool.py" init \
   --case /input/case.json --task /input/task.md \

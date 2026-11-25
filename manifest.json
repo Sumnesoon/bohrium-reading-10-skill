@@ -23,6 +23,11 @@
       "sha256": "c7ab98c5fffc8709e75051b32a317053b866c58d5d523ce0b8ca2dbd2b0bcccf"
     },
     {
+      "path": "README.md",
+      "bytes": 3844,
+      "sha256": "81e66a9a419737644c9910cead2a024c9a5b6ff8e5a367b6817cc97b51368a52"
+    },
+    {
       "path": "references/anchor-format.md",
       "bytes": 4170,
       "sha256": "8abd07a58e5d499b1d494a70f4de0f984b8818aae06c3e706efe1901cbf533f0"
@@ -38,14 +43,19 @@
       "sha256": "0c469d009637bfddc0e66b1eb754256421a851d685ff6fb5366be344705b581c"
     },
     {
+      "path": "REVIEWER_GUIDE.md",
+      "bytes": 3426,
+      "sha256": "e17d53cf8a0d89b2c6e48d9cf58cbe54596b1510b54839ebb53dea5bde2149d2"
+    },
+    {
       "path": "scripts/check_package.py",
       "bytes": 6864,
       "sha256": "ff1cbb1b06b63d5e1d57480ec68c46ba841371f8b74496b78c2da3f46ace42f7"
     },
     {
       "path": "scripts/notes_tool.py",
-      "bytes": 114238,
-      "sha256": "8099b57e343ea3f6f5ed362fa95090e46be3bdf48f2e450ab9b0241fa4cbce36"
+      "bytes": 117603,
+      "sha256": "54eaf0a5f9ec32de9f5e8df568e37dbec02dfea0802e6ab35beeff2a4ef30851"
     },
     {
       "path": "scripts/parser_adapter.py",
@@ -59,13 +69,13 @@
     },
     {
       "path": "SKILL.md",
-      "bytes": 17320,
-      "sha256": "5e80d5ceac83734b7703d3f588c9775e1b755bcd4a7eb958833b19a65ed778be"
+      "bytes": 17860,
+      "sha256": "6551ccc7fa678914d7fdf300c22c2323417cfba029bfdcccaae0cb72468d1d7e"
     },
     {
       "path": "USAGE.md",
-      "bytes": 8694,
-      "sha256": "557cd1a1958ea0fda2c325027a4b79ff8dada8ea9b7850762df3c942c0e202bb"
+      "bytes": 10190,
+      "sha256": "ceb0ba39365e5c26904f9626275964740d46305dde45324a67ec9c30b865b5ad"
     },
     {
       "path": "VERSION",

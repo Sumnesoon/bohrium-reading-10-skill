@@ -1,5 +1,9 @@
 # 章节对齐的证据型科研笔记（section-evidence-notes）
 
+## 当前参赛版本
+
+第二轮 DeepSeek Harness 版本见 [paper-evidence-audit](paper-evidence-audit/SKILL.md)，安装、使用和合成示例见[运行手册](paper-evidence-audit/references/runtime.md)。下文介绍仓库原有的 1.3.0 版本。
+
 版本 1.3.0｜MIT License｜Python 3.10+（PyMuPDF 可选；包内自带纯 Python PyPDF2 读取器；OCR 可选）
 
 本仓库是“文献总结与结构化笔记”赛题的参赛作品：一个把真实论文转成**按原文章节组织、可回链原文、可继续复用**的结构化笔记的 Skill。它不输出预先写好的摘要模板，也不是任何论文的预置答案。
